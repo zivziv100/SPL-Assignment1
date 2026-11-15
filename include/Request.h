@@ -51,6 +51,20 @@ private:
 public:
     GenerativeRequest(int id, const Model& model, int admissionCycle, std::string prompt, std::string scriptedOutput,
     std::size_t maxOutputTokens);
+
+    virtual ~GenerativeRequest();
+
+    virtual std::size_t getNeededMemory(const GPU& gpu) const override;
+    virtual std::size_t getMaxNeededMemory() const override;
+    virtual std::vector<std::string> getCacheableTokens() const override;
+    virtual std::string getOutput() const override;
+    virtual std::size_t getNeedToUnreserve() const override;
+
+    virtual void allocateOneBlock(GPU& gpu, std::size_t slot) const override;
+    virtual Request* clone(const Model& model) const override;
+    virtual void act(GPU& gpu) override;
+    virtual bool finished() const override;
+    virtual void reserveMemory(GPU& gpu) override;
 };
 
 class EmbeddingRequest: public Request{
@@ -59,8 +73,10 @@ private:
     std::size_t currentTokenIndex;
     std::vector<int> result;
 
+    // Rule of 3
     EmbeddingRequest(const EmbeddingRequest& other, const Model& model);
 public:
+    // Rule of 3
     EmbeddingRequest(int id, const Model& model, int admissionCycle, std::string prompt);
     virtual ~EmbeddingRequest();
 
