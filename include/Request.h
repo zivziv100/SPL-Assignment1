@@ -23,17 +23,19 @@ public:
     Request(int id, const Model& model, int admissionCycle, std::string prompt);
     virtual ~Request();
 
+    // Request Getters - for each type of request
     virtual std::size_t getNeededMemory(const GPU& gpu) const=0;
     virtual std::size_t getMaxNeededMemory() const=0;
     virtual std::vector<std::string> getCacheableTokens() const=0;
+    virtual std::string getOutput() const = 0;
+    virtual std::size_t getNeedToUnreserve() const = 0;
+
     virtual void allocateOneBlock(GPU& gpu, std::size_t slot) const = 0;
     virtual Request* clone(const Model& model) const = 0;
     virtual void act(GPU& gpu)=0;
     virtual bool finished() const=0;
     virtual void reserveMemory(GPU& gpu) = 0;
-    virtual std::string getOutput() const = 0;
-    virtual std::size_t getNeedToUnreserve() const = 0;
-
+    
     void deallocateMemory(GPU& gpu);
     
     // Getters
@@ -52,8 +54,31 @@ public:
 };
 
 class EmbeddingRequest: public Request{
+
+private:
+    std::size_t currentTokenIndex;
+    std::vector<int> result;
+
+    EmbeddingRequest(const EmbeddingRequest& other, const Model& model);
 public:
     EmbeddingRequest(int id, const Model& model, int admissionCycle, std::string prompt);
+    virtual ~EmbeddingRequest();
+
+    virtual std::size_t getNeededMemory(const GPU& gpu) const override;
+    virtual std::size_t getMaxNeededMemory() const override;
+    virtual std::vector<std::string> getCacheableTokens() const override;
+    virtual std::string getOutput() const override;
+    virtual std::size_t getNeedToUnreserve() const override;
+    
+    
+    virtual void allocateOneBlock(GPU& gpu, std::size_t slot) const override;
+    virtual Request* clone(const Model& model) const override;
+    virtual void act(GPU& gpu) override;
+    virtual bool finished() const override;
+    virtual void reserveMemory(GPU& gpu) override;
+
+    std::size_t getSlot(size_t k, const GPU& gpu) const;
+    std::size_t getOffset(size_t k, const GPU& gpu) const;
 };
 
 #endif
