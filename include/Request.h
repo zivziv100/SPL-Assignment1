@@ -48,6 +48,11 @@ class GenerativeRequest: public Request{
 private:
     std::string scriptedOutput;
     std::size_t maxOutputTokens;
+    std::vector<std::string> tokensOutput;
+    std::size_t tokensInMemory;
+
+    GenerativeRequest(const GenerativeRequest& other, const Model& model);
+    std::vector<std::string> getSequencePrefix(std::size_t length) const;
 public:
     GenerativeRequest(int id, const Model& model, int admissionCycle, std::string prompt, std::string scriptedOutput,
     std::size_t maxOutputTokens);
@@ -96,5 +101,4 @@ public:
     std::size_t getSlot(size_t k, const GPU& gpu) const;
     std::size_t getOffset(size_t k, const GPU& gpu) const;
 };
-
 #endif

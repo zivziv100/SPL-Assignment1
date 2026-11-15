@@ -6,7 +6,7 @@ using namespace std;
 
 // Rule Of 3
 Request::Request(int id, const Model& model, int admissionCycle, std::string prompt) : id(id) , model(model), admissionCycle(admissionCycle), tokens(model.tokenizer(prompt)), memoryBlocks(), reservedBlocks(0) {}
-Request::Request(const Request& other, const Model& model) : id(other.id), model (model), admissionCycle(admissionCycle), tokens(other.tokens), memoryBlocks(other.memoryBlocks), reservedBlocks(other.reservedBlocks) {}
+Request::Request(const Request& other, const Model& model) : id(other.id), model (model), admissionCycle(other.admissionCycle), tokens(other.tokens), memoryBlocks(other.memoryBlocks), reservedBlocks(other.reservedBlocks) {}
 Request::~Request() {}
 
 
