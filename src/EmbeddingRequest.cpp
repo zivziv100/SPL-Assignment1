@@ -12,7 +12,7 @@ size_t EmbeddingRequest::getMaxNeededMemory() const{
 }
 
 size_t EmbeddingRequest::getNeededMemory(const GPU& gpu) const {
-    return getMaxNeededMemory();
+    return getMaxNeededMemory(); // the needed memmory is the max needed memory, which is 2 * embeddingSize
 }
 
 vector<string> EmbeddingRequest::getCacheableTokens() const {
@@ -30,28 +30,28 @@ string EmbeddingRequest::getOutput() const {
 }
 
 size_t EmbeddingRequest::getNeedToUnreserve() const {
-    return reservedBlocks;
+    return reservedBlocks; // represents the reservedBlocks
 }
 
 bool EmbeddingRequest::finished() const {
-    return currentTokenIndex == tokens.size();
+    return currentTokenIndex == tokens.size(); // if we got to the end of the tokens, we done
 }
 
 Request* EmbeddingRequest::clone(const Model& model) const {
-    return new EmbeddingRequest(*this, model);
+    return new EmbeddingRequest(*this, model); // using the Copy-Constructor
 }
 
 void EmbeddingRequest::allocateOneBlock(GPU& gpu, size_t slot) const {
-    gpu.addMemoryBlock(*this, slot);
+    gpu.addMemoryBlock(*this, slot); // using the Double-Dispatch
 }
 
 void EmbeddingRequest::reserveMemory(GPU& gpu) {
-    size_t neededBlocks = gpu.getBlocksForMemory(getNeededMemory(gpu));
-    reservedBlocks = neededBlocks;
+    size_t neededBlocks = gpu.getBlocksForMemory(getNeededMemory(gpu)); // getting the needed blocks for the request
+    reservedBlocks = neededBlocks; // "reserving" them
     gpu.reserve(neededBlocks, *this);
 
-    for (size_t i = 0; i < neededBlocks; i++) {
-        size_t slot = gpu.allocateBlock(*this);
+    for (size_t i = 0; i < neededBlocks; i++) { // allocating each block, therefore 'reservedBlocks' decreases
+        size_t slot = gpu.allocateBlock(*this); 
         reservedBlocks = reservedBlocks - 1;
         memoryBlocks.push_back(slot);
     }
@@ -60,7 +60,7 @@ void EmbeddingRequest::reserveMemory(GPU& gpu) {
 void EmbeddingRequest::act(GPU& gpu) {
     size_t e = model.getEmbeddingSize();
     vector<string> temp;
-    temp.push_back(tokens[currentTokenIndex]);
+    temp.push_back(tokens[currentTokenIndex]); // taking the current token
 
     model.generateTokenEmbedding(temp, gpu, getSlot(e, gpu), getOffset(e, gpu));
 
@@ -75,7 +75,7 @@ void EmbeddingRequest::act(GPU& gpu) {
     if (finished()) {
         int tokensNumber = static_cast<int>(tokens.size());
         for (size_t j = 0; j < e; j++) {
-            result.push_back(gpu.readFromBlock(getSlot(j, gpu), getOffset(j, gpu)) / tokensNumber);
+            result.push_back(gpu.readFromBlock(getSlot(j, gpu), getOffset(j, gpu)) / tokensNumber); // Calculating the mean (avg)
         }
     }
 }
