@@ -1,8 +1,12 @@
 #include <fstream>
+#include <unordered_map>
+#include <string>
 #include <stdexcept>
 #include "json.hpp"
 
 #include "Server.h"
+#include "Model.h"
+
 
 using namespace std;
 using json = nlohmann::json;
@@ -55,4 +59,38 @@ Config Server::readConfig(string configPath) const{
     string policy = config["scheduling_policy"].get<string>();
 
     return Config{blockSize, gpuConfigs, modelConfigs, requestConfigs, policy};
+}
+
+Server::Server(string configPath) : gpus(), models(), nonSubmittedRequests(), waitingRequests(), activeRequests(), policy(nullptr), cacheHits(0), evictions(0), currentCycle(0){
+    Config conf = readConfig(configPath);
+    gpus.reserve(conf.gpus.size());
+    for (size_t i = 0; i < conf.gpus.size(); i++) {
+        gpus.push_back(GPU(conf.gpus[i].memoryBytes / conf.blockSize, conf.blockSize));
+    }
+    models.reserve(conf.models.size());
+    for (size_t i = 0; i < conf.models.size(); i++) {
+        models.push_back(new Model(conf.models[i].id, conf.models[i].embeddingSize));
+    }
+
+    unordered_map<string, Model*> idToModelMap;
+    for (size_t i = 0; i < models.size(); i++) {
+        idToModelMap.insert(make_pair(models[i]->getModelId(), models[i]));
+    }
+
+    nonSubmittedRequests.reserve(conf.requests.size());
+    for (size_t i = 0; i < conf.requests.size(); i++) {
+        const RequestConfig& currentReq = conf.requests[i];
+        const Model* currentModel = idToModelMap.at(currentReq.modelId);
+        if (currentReq.type == RequestType::Generative) {
+            nonSubmittedRequests.push_back(new GenerativeRequest(static_cast<int>(currentReq.id), *currentModel, currentReq.admissionCycle, currentReq.prompt, currentReq.scriptedOutput, currentReq.maxOutputTokens));
+
+        }
+        else {
+            nonSubmittedRequests.push_back(new EmbeddingRequest(static_cast<int>(currentReq.id), *currentModel, currentReq.admissionCycle, currentReq.prompt));
+        }
+    }
+
+    if (conf.policy == "arrivalOrder") policy = new ArrivalOrderPolicy();
+    else if (conf.policy == "shortestJob") policy = new ShortestJobPolicy();
+    else if (conf.policy == "longestPrefix") policy = new LongestPrefixPolicy();
 }

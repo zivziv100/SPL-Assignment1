@@ -5,6 +5,8 @@
 #include <string>
 #include "Request.h"
 #include "GPU.h"
+#include "Model.h"
+#include "SchedulingPolicy.h"
 
 struct GPUConfig{
     std::size_t memoryBytes;
@@ -48,6 +50,9 @@ private:
     std::vector<Request*> waitingRequests;
     std::vector<Request*> activeRequests;
     SchedulingPolicy* policy;
+    int cacheHits;
+    int evictions;
+    int currentCycle;
 public:
     Server(std::string configPath);
     bool step();

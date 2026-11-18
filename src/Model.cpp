@@ -1,5 +1,9 @@
 #include <cstdint>
 #include "Model.h"
+#include "GPU.h"
+
+
+Model::Model(const std::string& id, std::size_t embeddingSize) : modelId(id), embeddingSize(embeddingSize) {} 
 
 std::uint64_t Model::mixByte(std::uint64_t state, unsigned char byte) const {
     state ^= byte;
