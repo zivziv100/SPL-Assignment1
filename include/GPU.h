@@ -13,6 +13,7 @@ struct PrefixMatch {
 class MemoryBlock;
 class GenerativeRequest;
 class EmbeddingRequest;
+class Request;
 
 class GPU{
 public:

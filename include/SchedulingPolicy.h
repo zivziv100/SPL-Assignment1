@@ -20,10 +20,20 @@ public:
     virtual SchedulingPolicy* clone() const;
 };
 class ShortestJobPolicy : public SchedulingPolicy { 
+<<<<<<< HEAD
 public:
     virtual ~ShortestJobPolicy() = default;
     virtual std::vector<int> choose(const std::vector<const Request*>& eligible, const std::vector<GPU>& gpus) const override;
     virtual SchedulingPolicy* clone() const override;
+=======
+    private:
+    static bool compareIndices(const Request* a, const Request* b);
+    public:
+    virtual ~ShortestJobPolicy() = default;
+    virtual std::vector<int> choose(const std::vector<const Request*>& eligible, const std::vector<GPU>& gpus) const ;
+    virtual SchedulingPolicy* clone() const ;
+
+>>>>>>> 88e9ead (finish)
 };
 class LongestPrefixPolicy : public SchedulingPolicy {
 public:
