@@ -100,6 +100,5 @@ public:
 
     std::size_t getSlot(size_t k, const GPU& gpu) const;
     std::size_t getOffset(size_t k, const GPU& gpu) const;
-    std::
 };
 #endif

@@ -67,6 +67,7 @@ Server::Server(string configPath) : gpus(), models(), nonSubmittedRequests(), wa
     for (size_t i = 0; i < conf.gpus.size(); i++) {
         gpus.push_back(GPU(conf.gpus[i].memoryBytes / conf.blockSize, conf.blockSize));
     }
+    
     models.reserve(conf.models.size());
     for (size_t i = 0; i < conf.models.size(); i++) {
         models.push_back(new Model(conf.models[i].id, conf.models[i].embeddingSize));
