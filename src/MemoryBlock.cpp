@@ -38,3 +38,5 @@ IdleAction MemoryBlock::release() {
         return IdleAction::KeepCached;
     }
 }
+
+int MemoryBlock::getRefCount() const { return refCount; }
