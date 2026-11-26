@@ -12,6 +12,12 @@ protected:
     int* data;
 public:
     MemoryBlock(size_t size);
+    virtual ~MemoryBlock();
+    MemoryBlock(const MemoryBlock& other);
+    MemoryBlock& operator=(const MemoryBlock& other);
+    MemoryBlock(MemoryBlock&& other);
+    MemoryBlock& operator=(MemoryBlock&& other);
+
     virtual IdleAction onLastRelease() const = 0;
     virtual MemoryBlock* clone() const = 0;
     int readFromBlock(std::size_t offset) const;

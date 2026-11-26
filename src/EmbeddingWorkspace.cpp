@@ -7,10 +7,5 @@ IdleAction EmbeddingWorkspace::onLastRelease() const {
 }
 
 MemoryBlock* EmbeddingWorkspace::clone() const {
-    size_t newSize = size;
-    EmbeddingWorkspace* newBlock = new EmbeddingWorkspace(newSize);
-    for (size_t i = 0; i < newSize; ++i) {
-        newBlock->writeToBlock(i, this->readFromBlock(i));
-    }
-    return newBlock;
+    return new EmbeddingWorkspace(*this);
 }

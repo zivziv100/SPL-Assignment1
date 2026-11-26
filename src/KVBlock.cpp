@@ -7,10 +7,5 @@ IdleAction KVBlock::onLastRelease() const {
 }
 
 MemoryBlock* KVBlock::clone() const {
-   size_t newSize = size;
-    KVBlock* newBlock = new KVBlock(newSize);
-    for (size_t i = 0; i < newSize; ++i) {
-        newBlock->writeToBlock(i, this->readFromBlock(i));
-    }
-    return newBlock;
+    return new KVBlock(*this);
 }    
