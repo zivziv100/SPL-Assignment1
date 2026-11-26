@@ -9,6 +9,8 @@
 struct PrefixMatch {
     std::size_t matchedTokens;
     std::vector<std::size_t> blockIds;
+
+    PrefixMatch() : matchedTokens(0), blockIds() {}
 };
 
 class MemoryBlock;

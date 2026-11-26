@@ -3,7 +3,7 @@
 #include <stdexcept>   
 
 MemoryBlock::MemoryBlock(size_t size) :
- size(size), data(new int[size]), refCount(0)  
+ size(size), refCount(0), data(new int[size])  
  {
     for (size_t i = 0; i < size; i++) {
     data[i] = 0;
@@ -39,6 +39,6 @@ IdleAction MemoryBlock::release() {
     }
 }
 
-std::size_t MemoryBlock::getRefCount() const {
+int MemoryBlock::getRefCount() const {
     return refCount;
 }
