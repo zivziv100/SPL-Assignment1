@@ -42,6 +42,7 @@ public:
     int getId() const;
     const Model& getModel() const;
     int getAdmissionCycle() const;
+    PrefixMatch getCachedPrefix(const GPU& gpu) const;
 };
 
 class GenerativeRequest: public Request{

@@ -7,7 +7,7 @@ CXX = g++
 # -Weffc++: מדליק אזהרות לפי Effective C++, למשל אתחול שדות בInitializerList ומימוש Rule Of 5 במחלקות השומרות מצביעים
 # -std=c+11: מקמפל לפי תקן C++11
 # -Iinclude: אומר לקומפיילר לחפש קבצי Header בתיקייה /include
-CXXFLAGS = -g -Wall -Weffc++ -std=c+11 -Iinclude
+CXXFLAGS = -g -Wall -Weffc++ -std=c++11 -Iinclude
 
 SRCS = $(wildcard src/*.cpp) # אוסף אוטומטית את כל קבצי ה.cpp שבתוך /src
 OBJS = $(patsubst src/%.cpp,bin/%.o,$(SRCS)) # הופך כל קובץ cpp לקובץ o. כלומר, כך נקבל את רשימת כל קבצי ה-object שצריך לבנות

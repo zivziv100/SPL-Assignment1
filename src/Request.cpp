@@ -15,6 +15,12 @@ int Request:: getId() const { return id; }
 const Model& Request::getModel() const { return model; }
 int Request::getAdmissionCycle() const { return admissionCycle; }
 
+PrefixMatch Request::getCachedPrefix(const GPU& gpu) const {
+    vector<string> cacheable = getCacheableTokens();
+    if (cacheable.empty()) return PrefixMatch();
+    return gpu.findLongestCachedPrefix(model.getModelId(), model.getEmbeddingSize(), cacheable); 
+}
+
 void Request::deallocateMemory(GPU& gpu) {
     size_t needToUnreserve = getNeedToUnreserve();
     gpu.unreserve(needToUnreserve, *this);

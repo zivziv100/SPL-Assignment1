@@ -25,43 +25,23 @@ vector<int> LongestPrefixPolicy::choose(const vector<const Request*>& eligible, 
     return orderOfIndices;
 }
 
+size_t LongestPrefixPolicy::maxCachedPrefix(const Request* req, const vector<GPU>& gpus) {
+    size_t h = 0;
+    for (size_t i = 0; i < gpus.size(); i++) {
+        h = max(h, req->getCachedPrefix(gpus[i]).matchedTokens);
+    }
+    return h;
+}
+
 bool LongestPrefixPolicy::comparePrefix (const std::vector<const Request*>& eligible, const std::vector<GPU>& gpus, int a, int b) {
-   
-    if (a<0 || a>=eligible.size() || b<0 || b>=eligible.size()) {
-        throw out_of_range("Index is out of range of eligible requests");
-    }
-
-size_t maxPrefixA = 0;
-    vector<string> tokensA = eligible[a]->getCacheableTokens();
-    if (!tokensA.empty()) {
-        const Model& modelA = eligible[a]->getModel();
-        for (size_t i = 0; i < gpus.size(); i++) {
-            PrefixMatch match = gpus[i].findLongestCachedPrefix(modelA.getModelId(), modelA.getEmbeddingSize(), tokensA);
-            if (match.matchedTokens > maxPrefixA) {
-                maxPrefixA = match.matchedTokens;
-            }
-        }
-    }
-
+    size_t maxPrefixA = maxCachedPrefix(eligible[a], gpus);
     // חישוב h עבור בקשה b (המקסימום על פני כל ה-GPUs)
-    size_t maxPrefixB = 0;
-    vector<string> tokensB = eligible[b]->getCacheableTokens();
-    if (!tokensB.empty()) {
-        const Model& modelB = eligible[b]->getModel();
-        for (size_t i = 0; i < gpus.size(); i++) {
-            PrefixMatch match = gpus[i].findLongestCachedPrefix(modelB.getModelId(), modelB.getEmbeddingSize(), tokensB);
-            if (match.matchedTokens > maxPrefixB) {
-                maxPrefixB = match.matchedTokens;
-            }
-        }
-    }
+    size_t maxPrefixB = maxCachedPrefix(eligible[b], gpus);;
 
     if (maxPrefixA != maxPrefixB) {
         return maxPrefixA > maxPrefixB;
     }
 
     return eligible[a]->getId() < eligible[b]->getId();
-
-
 }
    

@@ -2,8 +2,7 @@
 #include "Request.h"
 #include "MemoryBlock.h"
 #include "GPU.h"
-#include <algorithm>
-#include <stdexcept>   
+#include <algorithm> 
 
 
 using namespace std;
@@ -27,10 +26,6 @@ vector<int> ShortestJobPolicy::choose(const vector<const Request*>& eligible, co
 
 
 bool ShortestJobPolicy::compareIndices (const std::vector<const Request*>& eligible, const std::vector<GPU>& gpus, int a, int b) {
-   if (a<0 || a>=eligible.size() || b<0 || b>=eligible.size()) {
-        throw out_of_range("Index is out of range of eligible requests");
-    }
-   
     size_t blocks1 = gpus[0].getBlocksForMemory(eligible[a]->getMaxNeededMemory());
     size_t blocks2 = gpus[0].getBlocksForMemory(eligible[b]->getMaxNeededMemory());
 

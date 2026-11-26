@@ -22,9 +22,10 @@ public:
     virtual SchedulingPolicy* clone() const;
 };
 class ShortestJobPolicy : public SchedulingPolicy { 
-    private:
+private:
     static bool compareIndices(const std::vector<const Request*>& eligible, const std::vector<GPU>& gpus, int a, int b);  
-      public:
+    
+public:
     virtual ~ShortestJobPolicy() = default;
     virtual std::vector<int> choose(const std::vector<const Request*>& eligible, const std::vector<GPU>& gpus) const ;
     virtual SchedulingPolicy* clone() const ;
@@ -33,6 +34,7 @@ class ShortestJobPolicy : public SchedulingPolicy {
 class LongestPrefixPolicy : public SchedulingPolicy {
 private:
     static bool comparePrefix(const std::vector<const Request*>& eligible, const std::vector<GPU>& gpus, int a, int b);
+    static std::size_t maxCachedPrefix(const Request* req, const std::vector<GPU>& gpus);
 public:
     virtual ~LongestPrefixPolicy() = default;
     virtual std::vector<int> choose(const std::vector<const Request*>& eligible, const std::vector<GPU>& gpus) const;
