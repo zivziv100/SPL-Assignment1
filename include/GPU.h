@@ -19,6 +19,10 @@ class Request;
 class GPU{
 public:
     GPU(std::size_t blocksNum, std::size_t blockSize);
+    ~GPU();
+    GPU(const GPU& other);
+    GPU& operator=(const GPU& other);
+    
     std::size_t availableSlots() const;
     std::size_t getBlocksForMemory(std::size_t memory) const;
     void reserve(std::size_t n, const Request& request);
@@ -35,8 +39,9 @@ public:
     PrefixMatch findLongestCachedPrefix(const std::string& modelId, std::size_t embeddingSize,
                                         const std::vector<std::string>& promptTokens) const;
     std::size_t getBlockSize() const; // Added Getter for blockSize for Requests
-    std::size_t findSlotWithKey(const std::string& modelId, const std::vector<std::string>& key) const;
-    std::size_t findSlotForNewBlock(const std::vector<std::size_t>& slot);
+    int getCacheHits() const;
+    int getEvictions() const;
+    void acquireCached(std::size_t slot);
 
 private:
     std::size_t blocksNum;
@@ -50,6 +55,10 @@ private:
     int evictions;
 
     void removeBlock(std::size_t slot);
+    void clear();
+    void copyBlocksFrom(const GPU& other);
+    std::size_t findSlotWithKey(const std::string& modelId, const std::vector<std::string>& key) const;
+    std::size_t findSlotForNewBlock(const std::vector<std::size_t>& slot);
 };
 
 #endif

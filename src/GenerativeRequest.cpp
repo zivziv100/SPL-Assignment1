@@ -46,7 +46,7 @@ void GenerativeRequest::allocateOneBlock(GPU& gpu, size_t slot) const {
 void GenerativeRequest::reserveMemory(GPU& gpu) {
     PrefixMatch prefix = gpu.findLongestCachedPrefix(model.getModelId(), model.getEmbeddingSize(), tokens);
     for (size_t i = 0; i < prefix.blockIds.size(); i++) {
-        gpu.acquire(prefix.blockIds[i]);
+        gpu.acquireCached(prefix.blockIds[i]);
         memoryBlocks.push_back(prefix.blockIds[i]);
     }
     tokensInMemory = prefix.matchedTokens;
