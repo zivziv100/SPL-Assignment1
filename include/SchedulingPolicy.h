@@ -1,6 +1,8 @@
 #ifndef SCHEDULING_POLICY_H
 #define SCHEDULING_POLICY_H
 
+#include <vector>
+
 class GPU;
 class Request;
 

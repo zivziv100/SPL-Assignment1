@@ -1,16 +1,15 @@
 #include "GPU.h"
 #include "MemoryBlock.h"
 #include "Request.h"
+#include <algorithm>
 using namespace std;
 
-<<<<<<< HEAD
-GPU::GPU(size_t blocksNum, size_t blockSize) : blocksNum(blocksNum), blockSize(blockSize), memory(blocksNum, nullptr) {}
-=======
 // ----------- RULE OF 5 : START -------------
 GPU::GPU(size_t blocksNum, size_t blockSize) : blocksNum(blocksNum), blockSize(blockSize), memory(blocksNum, nullptr), reqIdToBlocks(), totalReserved(0), modelIds(blocksNum), prefixKeys(blocksNum), cacheHits(0), evictions(0) {}
 GPU::~GPU() {
     clear();
 }
+
 GPU::GPU(const GPU& other) : blocksNum(other.blocksNum) , blockSize(other.blockSize), memory(other.memory.size(), nullptr), reqIdToBlocks(other.reqIdToBlocks), totalReserved(other.totalReserved), modelIds(other.modelIds), prefixKeys(other.prefixKeys), cacheHits(other.cacheHits), evictions(other.evictions) {
     copyBlocksFrom(other);
 }
@@ -25,7 +24,6 @@ GPU& GPU::operator=(const GPU& other) {
         cacheHits = other.cacheHits;
         evictions = other.evictions;
         totalReserved = other.totalReserved;
->>>>>>> e174c18308677db19337d2f79a89e639909d0300
 
         memory.assign(other.memory.size(), nullptr);
         copyBlocksFrom(other);
@@ -56,12 +54,13 @@ size_t GPU::getBlocksForMemory(size_t memory) const {
 }
 
 void GPU::reserve(size_t n, const Request& request) {
-   if (n == 0) {
-        return;
-    }
-   reqIdToBlocks[request.getId()] += n;
+    int reqId = request.getId();
+    size_t& reqBlocks = reqIdToBlocks[reqId];
+
+    reqBlocks += n;
     totalReserved += n;
 }
+
 void GPU::unreserve(size_t n, const Request& request) {
     if (n == 0) {
         return;
@@ -92,40 +91,17 @@ std::size_t GPU::availableSlots() const {
     }
     return memory.size() - usedOrReserved;
 }
-std::size_t GPU::getBlocksForMemory(std::size_t memory) const {
-    if (memory == 0 || blockSize == 0) {
-        return 0;
-    }
-    return (memory + blockSize - 1) / blockSize;
-}
-// Double - Dispatch!!
-void GPU::addMemoryBlock(const GenerativeRequest& request, std::size_t slot) {
-    (void)request; 
-    memory[slot] = new KVBlock(blockSize);
+
+void GPU::acquire(size_t slot) {
+    memory[slot] -> acquire();
 }
 void GPU::acquireCached(size_t slot) {
     this->acquire(slot);
     cacheHits++;
 }
 
-void GPU::addMemoryBlock(const EmbeddingRequest& request, std::size_t slot) {
-    (void)request; 
-    memory[slot] = new EmbeddingWorkspace(blockSize);
-}
-
-void GPU::release(std::size_t slot) {
-    if (slot >= blocksNum || memory[slot] == nullptr) {
-        return;
-    }
-<<<<<<< HEAD
-
-    IdleAction action = memory[slot]->release();
-    if (memory[slot]->getRefCount() == 0) {
-        bool hasPrefixKey = !prefixKeys[slot].empty();
-        if (action == IdleAction::Destroy || !hasPrefixKey) {
-            removeBlock(slot);
-        }
-    }
+int GPU::readFromBlock(size_t blockId, size_t offset) const {
+    return memory[blockId] -> readFromBlock(offset);
 }
 
 void GPU::writeToBlock(std::size_t blockId, std::size_t offset, int value) {
@@ -135,6 +111,51 @@ void GPU::writeToBlock(std::size_t blockId, std::size_t offset, int value) {
     memory[blockId]->writeToBlock(offset, value);
 }
 
+void GPU::addMemoryBlock(const EmbeddingRequest& request, size_t slot) {
+    memory[slot] = new EmbeddingWorkspace(blockSize);
+}
+void GPU::addMemoryBlock(const GenerativeRequest& request, std::size_t slot) {
+    (void)request; 
+    memory[slot] = new KVBlock(blockSize);
+}
+
+void GPU::release(std::size_t slot) {
+    if (slot >= blocksNum || memory[slot] == nullptr) {
+        return;
+    }
+    IdleAction action = memory[slot]->release();
+    if (memory[slot]->getRefCount() == 0) {
+        bool hasPrefixKey = !prefixKeys[slot].empty();
+        if (action == IdleAction::Destroy || !hasPrefixKey) {
+            removeBlock(slot);
+        }
+    }
+}
+
+PrefixMatch GPU::findLongestCachedPrefix(const string& modelId, size_t embeddingSize,const vector<string>& promptTokens) const {
+    PrefixMatch result;
+    result.matchedTokens = 0;
+
+    size_t t = blockSize / embeddingSize;
+    vector<string> prefix;
+
+    size_t start = prefix.size();
+    while (prefix.size() + t <= promptTokens.size()) {
+        for (size_t i = 0; i < t; i++) {
+            prefix.push_back(promptTokens[start]);
+            start++;
+        }
+        bool found = false;
+        size_t slot = findSlotWithKey(modelId, prefix);
+        if (slot != blocksNum) {
+            found = true;
+            result.blockIds.push_back(slot);
+            result.matchedTokens =  prefix.size();
+        }
+        if (!found) break;
+    }
+    return result;
+}
 
 void GPU::assignPrefixToBlock(std::size_t block, const std::vector<std::string>& prefixTokens, const std::string& modelId) {
     if (block >= blocksNum || memory[block] == nullptr || prefixTokens.empty()) {
@@ -151,9 +172,7 @@ void GPU::assignPrefixToBlock(std::size_t block, const std::vector<std::string>&
     modelIds[block] = modelId;
     prefixKeys[block] = prefixTokens;
 }
-=======
-    return result;
-}
+
 void GPU::copyMemoryFromOtherGPU(const GPU& other, const vector<std::size_t>& blocks) {
     vector<size_t> protectedSlots;
     for (size_t i = 0; i < blocks.size(); i++) {
@@ -230,4 +249,3 @@ int GPU::getCacheHits() const { return cacheHits; }
 int GPU::getEvictions() const { return evictions; }
 size_t GPU::getBlockSize() const { return blockSize; }
 // ----------- Getters : END -------------
->>>>>>> e174c18308677db19337d2f79a89e639909d0300
