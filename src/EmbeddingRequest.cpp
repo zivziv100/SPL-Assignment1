@@ -6,6 +6,7 @@ using namespace std;
 
 EmbeddingRequest::EmbeddingRequest(int id, const Model& model, int admissionCycle, std::string prompt) : Request(id, model, admissionCycle, prompt), currentTokenIndex(0), result() {}
 EmbeddingRequest::EmbeddingRequest(const EmbeddingRequest& other, const Model& model) : Request(other, model) , currentTokenIndex(other.currentTokenIndex), result(other.result) {}
+EmbeddingRequest::~EmbeddingRequest() { }
 
 size_t EmbeddingRequest::getMaxNeededMemory() const{
     return model.getEmbeddingSize() * 2;
@@ -16,7 +17,7 @@ size_t EmbeddingRequest::getNeededMemory(const GPU& gpu) const {
 }
 
 vector<string> EmbeddingRequest::getCacheableTokens() const {
-    // "nothing for an EmbeddingRequest"
+    return vector<string>();
 }
 
 string EmbeddingRequest::getOutput() const {

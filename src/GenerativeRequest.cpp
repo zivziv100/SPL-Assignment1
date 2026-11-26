@@ -15,6 +15,8 @@ GenerativeRequest::GenerativeRequest(int id, const Model& model, int admissionCy
 GenerativeRequest::GenerativeRequest(const GenerativeRequest& other, const Model& model) : Request(other, model), 
 scriptedOutput(other.scriptedOutput), maxOutputTokens(other.maxOutputTokens), tokensOutput(other.tokensOutput), tokensInMemory(other.tokensInMemory) {} 
 
+GenerativeRequest::~GenerativeRequest() {}
+
 size_t GenerativeRequest::getMaxNeededMemory() const{
     size_t n = tokens.size();
     size_t m = maxOutputTokens;
@@ -88,7 +90,6 @@ vector<string> GenerativeRequest::getSequencePrefix(size_t length) const {
     }
     return result;
 }
-
 
 bool GenerativeRequest::finished() const {
     return tokensInMemory == (tokens.size() + tokensOutput.size());
