@@ -1,4 +1,5 @@
 #include <fstream>
+#include <iostream>
 #include <unordered_map>
 #include <string>
 #include <stdexcept>
@@ -61,7 +62,7 @@ Config Server::readConfig(string configPath) const{
     return Config{blockSize, gpuConfigs, modelConfigs, requestConfigs, policy};
 }
 
-Server::Server(string configPath) : gpus(), models(), nonSubmittedRequests(), waitingRequests(), activeRequests(), policy(nullptr), cacheHits(0), evictions(0), currentCycle(0){
+Server::Server(string configPath) : gpus(), models(), nonSubmittedRequests(), waitingRequests(), activeRequests(), policy(nullptr), currentCycle(0), activeGpu(){
     Config conf = readConfig(configPath);
     gpus.reserve(conf.gpus.size());
     for (size_t i = 0; i < conf.gpus.size(); i++) {
@@ -97,7 +98,6 @@ Server::Server(string configPath) : gpus(), models(), nonSubmittedRequests(), wa
 }
 
 Server::~Server() {
-
     for (size_t i = 0; i < nonSubmittedRequests.size(); i++) {
         delete nonSubmittedRequests[i];
     }
@@ -120,7 +120,6 @@ Server::~Server() {
     }
 }
 
-
 Server::Server(const Server& other)
     : gpus(other.gpus),
       models(),
@@ -128,10 +127,9 @@ Server::Server(const Server& other)
       waitingRequests(),
       activeRequests(),
       policy(nullptr),
-      cacheHits(other.cacheHits),
-      evictions(other.evictions),
-      currentCycle(other.currentCycle) {
-
+      currentCycle(other.currentCycle),
+      activeGpu(other.activeGpu) {
+        
     if (other.policy != nullptr) {
         policy = other.policy->clone();
     }
@@ -161,7 +159,6 @@ Server::Server(const Server& other)
         activeRequests.push_back(other.activeRequests[i]->clone(*matchingModel));
     }
 }
-
 Server& Server::operator=(const Server& other) {
     if (this != &other) {
         for (size_t i = 0; i < nonSubmittedRequests.size(); i++) {
@@ -190,9 +187,8 @@ Server& Server::operator=(const Server& other) {
         }
 
         gpus = other.gpus;
-        cacheHits = other.cacheHits;
-        evictions = other.evictions;
         currentCycle = other.currentCycle;
+        activeGpu = other.activeGpu;
 
         if (other.policy != nullptr) {
             policy = other.policy->clone();
@@ -227,7 +223,6 @@ Server& Server::operator=(const Server& other) {
     return *this;
 }
 
-// 4. Move Constructor
 Server::Server(Server&& other) noexcept
     : gpus(),
       models(),
@@ -235,12 +230,11 @@ Server::Server(Server&& other) noexcept
       waitingRequests(),
       activeRequests(),
       policy(other.policy),
-      cacheHits(other.cacheHits),
-      evictions(other.evictions),
-      currentCycle(other.currentCycle) {
+      currentCycle(other.currentCycle),
+      activeGpu(move(other.activeGpu)) {
 
     for (size_t i = 0; i < other.gpus.size(); i++) {
-        gpus.push_back(std::move(other.gpus[i]));
+        gpus.push_back(move(other.gpus[i]));
     }
     other.gpus.clear();
 
@@ -263,14 +257,11 @@ Server::Server(Server&& other) noexcept
         activeRequests.push_back(other.activeRequests[i]);
     }
     other.activeRequests.clear();
+    other.activeGpu.clear();
 
     other.policy = nullptr;
-    other.cacheHits = 0;
-    other.evictions = 0;
     other.currentCycle = 0;
 }
-
-// 5. Move Assignment Operator
 Server& Server::operator=(Server&& other) noexcept {
     if (this != &other) {
         for (size_t i = 0; i < nonSubmittedRequests.size(); i++) {
@@ -300,7 +291,7 @@ Server& Server::operator=(Server&& other) noexcept {
         gpus.clear();
 
         for (size_t i = 0; i < other.gpus.size(); i++) {
-            gpus.push_back(std::move(other.gpus[i]));
+            gpus.push_back(move(other.gpus[i]));
         }
         other.gpus.clear();
 
@@ -325,15 +316,28 @@ Server& Server::operator=(Server&& other) noexcept {
         other.activeRequests.clear();
 
         policy = other.policy;
-        cacheHits = other.cacheHits;
-        evictions = other.evictions;
         currentCycle = other.currentCycle;
+        activeGpu = move(other.activeGpu);
 
         other.policy = nullptr;
-        other.cacheHits = 0;
-        other.evictions = 0;
         other.currentCycle = 0;
+        other.activeGpu.clear();
+    }
+    return *this;
+}
+
+void Server::serve() {
+    while (step()) {}
+
+    int totalHits = 0;
+    int totalEvictions = 0;
+
+    for (size_t i = 0; i < gpus.size(); i++) {
+        totalHits += gpus[i].getCacheHits();
+        totalEvictions += gpus[i].getEvictions();
     }
 
-    return *this;
+    cout << "summary: cycles=" << currentCycle
+         << " cache hits=" << totalHits
+         << " evictions=" << totalEvictions << endl;
 }

@@ -34,13 +34,15 @@ GPU& GPU::operator=(const GPU& other) {
 }
 
 GPU::GPU(GPU&& other) noexcept
-    : blocksNum(other.blocksNum), blockSize(other.blockSize),
+    : blocksNum(other.blocksNum),
+      blockSize(other.blockSize),
       memory(std::move(other.memory)),
       reqIdToBlocks(std::move(other.reqIdToBlocks)),
       totalReserved(other.totalReserved),
       modelIds(std::move(other.modelIds)),
       prefixKeys(std::move(other.prefixKeys)),
-      cacheHits(other.cacheHits), evictions(other.evictions) {
+      cacheHits(other.cacheHits), 
+      evictions(other.evictions) {
     other.memory.clear();
     other.blocksNum = 0;
     other.blockSize = 0;

@@ -50,9 +50,8 @@ private:
     std::vector<Request*> waitingRequests;
     std::vector<Request*> activeRequests;
     SchedulingPolicy* policy;
-    int cacheHits;
-    int evictions;
     int currentCycle;
+    std::vector<int> activeGpu;
 public:
     Server(std::string configPath);
     ~Server();
