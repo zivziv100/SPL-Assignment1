@@ -32,12 +32,12 @@ MemoryBlock& MemoryBlock::operator=(const MemoryBlock& other) {
     return *this;
 }
 
-MemoryBlock::MemoryBlock(MemoryBlock&& other) : size(other.size), refCount(other.refCount), data(other.data) {
+MemoryBlock::MemoryBlock(MemoryBlock&& other) noexcept : size(other.size), refCount(other.refCount), data(other.data) {
     other.data = nullptr;
     other.size = 0;
     other.refCount = 0;
 }
-MemoryBlock& MemoryBlock::operator=(MemoryBlock&& other) {
+MemoryBlock& MemoryBlock::operator=(MemoryBlock&& other) noexcept {
     if (this != &other) {
         delete[] data;
 

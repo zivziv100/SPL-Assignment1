@@ -2,6 +2,8 @@
 #include "MemoryBlock.h"
 #include "Request.h"
 #include <algorithm>
+#include <utility>
+
 using namespace std;
 
 // ----------- RULE OF 5 : START -------------
@@ -31,6 +33,45 @@ GPU& GPU::operator=(const GPU& other) {
     return *this;
 }
 
+GPU::GPU(GPU&& other) noexcept
+    : blocksNum(other.blocksNum), blockSize(other.blockSize),
+      memory(std::move(other.memory)),
+      reqIdToBlocks(std::move(other.reqIdToBlocks)),
+      totalReserved(other.totalReserved),
+      modelIds(std::move(other.modelIds)),
+      prefixKeys(std::move(other.prefixKeys)),
+      cacheHits(other.cacheHits), evictions(other.evictions) {
+    other.memory.clear();
+    other.blocksNum = 0;
+    other.blockSize = 0;
+    other.totalReserved = 0;
+    other.cacheHits = 0;
+    other.evictions = 0;
+}
+GPU& GPU::operator=(GPU&& other) noexcept {
+    if (this != &other) {
+        clear();
+
+        blocksNum = other.blocksNum;
+        blockSize = other.blockSize;
+        memory = std::move(other.memory);
+        reqIdToBlocks = std::move(other.reqIdToBlocks);
+        totalReserved = other.totalReserved;
+        modelIds = std::move(other.modelIds);
+        prefixKeys = std::move(other.prefixKeys);
+        cacheHits = other.cacheHits;
+        evictions = other.evictions;
+
+        other.memory.clear();
+        other.blocksNum = 0;
+        other.blockSize = 0;
+        other.totalReserved = 0;
+        other.cacheHits = 0;
+        other.evictions = 0;
+    }
+    return *this;
+}
+
 void GPU::copyBlocksFrom(const GPU& other) {
     for (size_t i = 0; i < other.memory.size(); i++) {
         if (other.memory[i] != nullptr) {
@@ -49,6 +90,7 @@ void GPU::clear() {
     }
 } 
 // ----------- RULE OF 5 : END -------------
+
 size_t GPU::getBlocksForMemory(size_t memory) const {
     return (memory +blockSize - 1) / blockSize;
 }
@@ -193,7 +235,6 @@ void GPU::copyMemoryFromOtherGPU(const GPU& other, const vector<std::size_t>& bl
         protectedSlots.push_back(target);
     }
 }
-
 
 void GPU::removeBlock(size_t slot) {
     delete memory[slot];

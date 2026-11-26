@@ -15,8 +15,8 @@ public:
     virtual ~MemoryBlock();
     MemoryBlock(const MemoryBlock& other);
     MemoryBlock& operator=(const MemoryBlock& other);
-    MemoryBlock(MemoryBlock&& other);
-    MemoryBlock& operator=(MemoryBlock&& other);
+    MemoryBlock(MemoryBlock&& other) noexcept;
+    MemoryBlock& operator=(MemoryBlock&& other) noexcept;
 
     virtual IdleAction onLastRelease() const = 0;
     virtual MemoryBlock* clone() const = 0;
