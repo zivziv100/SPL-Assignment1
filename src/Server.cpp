@@ -95,3 +95,245 @@ Server::Server(string configPath) : gpus(), models(), nonSubmittedRequests(), wa
     else if (conf.policy == "shortestJob") policy = new ShortestJobPolicy();
     else if (conf.policy == "longestPrefix") policy = new LongestPrefixPolicy();
 }
+
+Server::~Server() {
+
+    for (size_t i = 0; i < nonSubmittedRequests.size(); i++) {
+        delete nonSubmittedRequests[i];
+    }
+    nonSubmittedRequests.clear();
+    for (size_t i = 0; i < waitingRequests.size(); i++) {
+        delete waitingRequests[i];
+    }
+    waitingRequests.clear();
+    for (size_t i = 0; i < activeRequests.size(); i++) {
+        delete activeRequests[i];
+    }
+    activeRequests.clear();
+    for (size_t i = 0; i < models.size(); i++) {
+        delete models[i];
+    }
+    models.clear();
+    if (policy != nullptr) {
+        delete policy;
+        policy = nullptr;
+    }
+}
+
+
+Server::Server(const Server& other)
+    : gpus(other.gpus),
+      models(),
+      nonSubmittedRequests(),
+      waitingRequests(),
+      activeRequests(),
+      policy(nullptr),
+      cacheHits(other.cacheHits),
+      evictions(other.evictions),
+      currentCycle(other.currentCycle) {
+
+    if (other.policy != nullptr) {
+        policy = other.policy->clone();
+    }
+
+    unordered_map<string, Model*> idToNewModel;
+    for (size_t i = 0; i < other.models.size(); i++) {
+        Model* copiedModel = new Model(*other.models[i]);
+        models.push_back(copiedModel);
+        idToNewModel.insert(make_pair(copiedModel->getModelId(), copiedModel));
+    }
+
+    for (size_t i = 0; i < other.nonSubmittedRequests.size(); i++) {
+        string modelId = other.nonSubmittedRequests[i]->getModel().getModelId();
+        const Model* matchingModel = idToNewModel.at(modelId);
+        nonSubmittedRequests.push_back(other.nonSubmittedRequests[i]->clone(*matchingModel));
+    }
+
+    for (size_t i = 0; i < other.waitingRequests.size(); i++) {
+        string modelId = other.waitingRequests[i]->getModel().getModelId();
+        const Model* matchingModel = idToNewModel.at(modelId);
+        waitingRequests.push_back(other.waitingRequests[i]->clone(*matchingModel));
+    }
+
+    for (size_t i = 0; i < other.activeRequests.size(); i++) {
+        string modelId = other.activeRequests[i]->getModel().getModelId();
+        const Model* matchingModel = idToNewModel.at(modelId);
+        activeRequests.push_back(other.activeRequests[i]->clone(*matchingModel));
+    }
+}
+
+Server& Server::operator=(const Server& other) {
+    if (this != &other) {
+        for (size_t i = 0; i < nonSubmittedRequests.size(); i++) {
+            delete nonSubmittedRequests[i];
+        }
+        nonSubmittedRequests.clear();
+
+        for (size_t i = 0; i < waitingRequests.size(); i++) {
+            delete waitingRequests[i];
+        }
+        waitingRequests.clear();
+
+        for (size_t i = 0; i < activeRequests.size(); i++) {
+            delete activeRequests[i];
+        }
+        activeRequests.clear();
+
+        for (size_t i = 0; i < models.size(); i++) {
+            delete models[i];
+        }
+        models.clear();
+
+        if (policy != nullptr) {
+            delete policy;
+            policy = nullptr;
+        }
+
+        gpus = other.gpus;
+        cacheHits = other.cacheHits;
+        evictions = other.evictions;
+        currentCycle = other.currentCycle;
+
+        if (other.policy != nullptr) {
+            policy = other.policy->clone();
+        }
+
+        unordered_map<string, Model*> idToNewModel;
+        for (size_t i = 0; i < other.models.size(); i++) {
+            Model* copiedModel = new Model(*other.models[i]);
+            models.push_back(copiedModel);
+            idToNewModel.insert(make_pair(copiedModel->getModelId(), copiedModel));
+        }
+
+        for (size_t i = 0; i < other.nonSubmittedRequests.size(); i++) {
+            string modelId = other.nonSubmittedRequests[i]->getModel().getModelId();
+            const Model* matchingModel = idToNewModel.at(modelId);
+            nonSubmittedRequests.push_back(other.nonSubmittedRequests[i]->clone(*matchingModel));
+        }
+
+        for (size_t i = 0; i < other.waitingRequests.size(); i++) {
+            string modelId = other.waitingRequests[i]->getModel().getModelId();
+            const Model* matchingModel = idToNewModel.at(modelId);
+            waitingRequests.push_back(other.waitingRequests[i]->clone(*matchingModel));
+        }
+
+        for (size_t i = 0; i < other.activeRequests.size(); i++) {
+            string modelId = other.activeRequests[i]->getModel().getModelId();
+            const Model* matchingModel = idToNewModel.at(modelId);
+            activeRequests.push_back(other.activeRequests[i]->clone(*matchingModel));
+        }
+    }
+
+    return *this;
+}
+
+// 4. Move Constructor
+Server::Server(Server&& other) noexcept
+    : gpus(),
+      models(),
+      nonSubmittedRequests(),
+      waitingRequests(),
+      activeRequests(),
+      policy(other.policy),
+      cacheHits(other.cacheHits),
+      evictions(other.evictions),
+      currentCycle(other.currentCycle) {
+
+    for (size_t i = 0; i < other.gpus.size(); i++) {
+        gpus.push_back(std::move(other.gpus[i]));
+    }
+    other.gpus.clear();
+
+    for (size_t i = 0; i < other.models.size(); i++) {
+        models.push_back(other.models[i]);
+    }
+    other.models.clear();
+
+    for (size_t i = 0; i < other.nonSubmittedRequests.size(); i++) {
+        nonSubmittedRequests.push_back(other.nonSubmittedRequests[i]);
+    }
+    other.nonSubmittedRequests.clear();
+
+    for (size_t i = 0; i < other.waitingRequests.size(); i++) {
+        waitingRequests.push_back(other.waitingRequests[i]);
+    }
+    other.waitingRequests.clear();
+
+    for (size_t i = 0; i < other.activeRequests.size(); i++) {
+        activeRequests.push_back(other.activeRequests[i]);
+    }
+    other.activeRequests.clear();
+
+    other.policy = nullptr;
+    other.cacheHits = 0;
+    other.evictions = 0;
+    other.currentCycle = 0;
+}
+
+// 5. Move Assignment Operator
+Server& Server::operator=(Server&& other) noexcept {
+    if (this != &other) {
+        for (size_t i = 0; i < nonSubmittedRequests.size(); i++) {
+            delete nonSubmittedRequests[i];
+        }
+        nonSubmittedRequests.clear();
+
+        for (size_t i = 0; i < waitingRequests.size(); i++) {
+            delete waitingRequests[i];
+        }
+        waitingRequests.clear();
+
+        for (size_t i = 0; i < activeRequests.size(); i++) {
+            delete activeRequests[i];
+        }
+        activeRequests.clear();
+
+        for (size_t i = 0; i < models.size(); i++) {
+            delete models[i];
+        }
+        models.clear();
+
+        if (policy != nullptr) {
+            delete policy;
+            policy = nullptr;
+        }
+        gpus.clear();
+
+        for (size_t i = 0; i < other.gpus.size(); i++) {
+            gpus.push_back(std::move(other.gpus[i]));
+        }
+        other.gpus.clear();
+
+        for (size_t i = 0; i < other.models.size(); i++) {
+            models.push_back(other.models[i]);
+        }
+        other.models.clear();
+
+        for (size_t i = 0; i < other.nonSubmittedRequests.size(); i++) {
+            nonSubmittedRequests.push_back(other.nonSubmittedRequests[i]);
+        }
+        other.nonSubmittedRequests.clear();
+
+        for (size_t i = 0; i < other.waitingRequests.size(); i++) {
+            waitingRequests.push_back(other.waitingRequests[i]);
+        }
+        other.waitingRequests.clear();
+
+        for (size_t i = 0; i < other.activeRequests.size(); i++) {
+            activeRequests.push_back(other.activeRequests[i]);
+        }
+        other.activeRequests.clear();
+
+        policy = other.policy;
+        cacheHits = other.cacheHits;
+        evictions = other.evictions;
+        currentCycle = other.currentCycle;
+
+        other.policy = nullptr;
+        other.cacheHits = 0;
+        other.evictions = 0;
+        other.currentCycle = 0;
+    }
+
+    return *this;
+}

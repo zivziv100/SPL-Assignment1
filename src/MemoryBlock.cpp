@@ -39,4 +39,6 @@ IdleAction MemoryBlock::release() {
     }
 }
 
-int MemoryBlock::getRefCount() const { return refCount; }
+std::size_t MemoryBlock::getRefCount() const {
+    return refCount;
+}
