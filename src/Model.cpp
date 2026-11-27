@@ -2,6 +2,7 @@
 #include "Model.h"
 #include "GPU.h"
 
+using namespace std;
 
 Model::Model(const std::string& id, std::size_t embeddingSize) : modelId(id), embeddingSize(embeddingSize) {} 
 
@@ -51,6 +52,23 @@ size_t offset) const {
         value ^= value >> 31;
         gpu.writeToBlock(slot, offset + i, static_cast<int>(value % 2001ULL) - 1000);
     }
+}
+vector<string> Model::tokenizer(string text) const {
+    vector<string> tokens;
+    string current;
+
+    for (size_t i = 0; i < text.size(); ++i) {
+        char c = text[i];
+        if (c == ' ') {
+            if (!current.empty()) tokens.push_back(current);
+            current.clear();
+        }
+        else if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')) {
+            current += c;
+        }
+    }
+    if (!current.empty()) tokens.push_back(current);
+    return tokens;
 }
 
 std::string Model::getModelId() const { return modelId; }

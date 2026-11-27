@@ -341,3 +341,33 @@ void Server::serve() {
          << " cache hits=" << totalHits
          << " evictions=" << totalEvictions << endl;
 }
+bool Server::step() {}
+
+bool Server::arriveRequests() {
+    vector<Request*> stillPending;
+    for (size_t i = 0; i < nonSubmittedRequests.size(); i++) {
+        Request* req = nonSubmittedRequests[i];
+        if (req->getAdmissionCycle() > currentCycle) {
+            stillPending.push_back(req);
+            continue;
+        }
+
+        bool fitsSomewhere = false;
+        for (size_t i = 0; i < gpus.size(); i++) {
+            size_t blocks = gpus[i].getBlocksForMemory(nonSubmittedRequests[i]->getMaxNeededMemory());
+            if (blocks <= gpus[i].getBlocksNum()) {
+                fitsSomewhere = true;
+                break;
+            }
+        }
+
+        if (fitsSomewhere) {
+            waitingRequests.push_back(req);
+            for (size_t i = 0; i < nonSubmittedRequests.size(); i++) {
+                cout << "rejected " << req->getId() << " cycle=" << currentCycle << endl;
+                delete req;
+            }
+        }
+    }
+    nonSubmittedRequests = stillPending;
+}
