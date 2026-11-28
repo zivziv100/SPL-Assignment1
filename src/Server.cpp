@@ -97,6 +97,7 @@ Server::Server(string configPath) : gpus(), models(), nonSubmittedRequests(), wa
     else if (conf.policy == "longestPrefix") policy = new LongestPrefixPolicy();
 }
 
+// ------- RULE OF 5 : START -------
 Server::~Server() {
     for (size_t i = 0; i < nonSubmittedRequests.size(); i++) {
         delete nonSubmittedRequests[i];
@@ -325,6 +326,7 @@ Server& Server::operator=(Server&& other) noexcept {
     }
     return *this;
 }
+// ------- RULE OF 5 : END ---------
 
 void Server::serve() {
     while (step()) {}
@@ -364,7 +366,7 @@ void Server::arriveRequests() {
         }
 
         bool fitsSomewhere = false;
-        for (size_t j = 0; j < gpus.size(); i++) {
+        for (size_t j = 0; j < gpus.size(); j++) {
             size_t blocks = gpus[j].getBlocksForMemory(req->getMaxNeededMemory()); // the request should fit in the gpu at her maximum needed memory
             if (blocks <= gpus[j].getBlocksNum()) { // if it fits, we stop searching
                 fitsSomewhere = true;
@@ -441,7 +443,7 @@ bool Server::tryAdmit(Request* req) {
             sourceMatch = m;
         }
     }
-    if (sourceGpu == -1) {
+    if (sourceGpu != -1) { // if we found a GPU with bigger cache, we take copy from him
         gpus[bestGpu].copyMemoryFromOtherGPU(gpus[sourceGpu], sourceMatch.blockIds);
     }
 
