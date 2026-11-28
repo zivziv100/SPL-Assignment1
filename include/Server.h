@@ -52,6 +52,11 @@ private:
     SchedulingPolicy* policy;
     int currentCycle;
     std::vector<int> activeGpu;
+
+    bool arriveRequests();
+    void admitRequests();
+    bool tryAdmit(Request* req);
+    void actRequests();
 public:
     Server(std::string configPath);
     ~Server();

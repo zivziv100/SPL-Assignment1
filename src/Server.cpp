@@ -5,7 +5,7 @@
 #include <stdexcept>
 #include "json.hpp"
 
-#include "Server.h"
+#include <Server.h>
 #include "Model.h"
 
 
@@ -341,33 +341,135 @@ void Server::serve() {
          << " cache hits=" << totalHits
          << " evictions=" << totalEvictions << endl;
 }
-bool Server::step() {}
+bool Server::step() {
+    if (nonSubmittedRequests.empty() && waitingRequests.empty() && activeRequests.empty()) {
+        return false;
+    }
 
+    arriveRequests();
+    admitRequests();
+    actRequests();
+    currentCycle++;
+    return true;
+}
+
+// -------- step() helper functions -------
 bool Server::arriveRequests() {
     vector<Request*> stillPending;
     for (size_t i = 0; i < nonSubmittedRequests.size(); i++) {
         Request* req = nonSubmittedRequests[i];
-        if (req->getAdmissionCycle() > currentCycle) {
+        if (req->getAdmissionCycle() > currentCycle) { // Requests that their cycle is not now, go to pending
             stillPending.push_back(req);
             continue;
         }
 
         bool fitsSomewhere = false;
-        for (size_t i = 0; i < gpus.size(); i++) {
-            size_t blocks = gpus[i].getBlocksForMemory(nonSubmittedRequests[i]->getMaxNeededMemory());
-            if (blocks <= gpus[i].getBlocksNum()) {
+        for (size_t j = 0; j < gpus.size(); i++) {
+            size_t blocks = gpus[j].getBlocksForMemory(req->getMaxNeededMemory()); // the request should fit in the gpu at her maximum needed memory
+            if (blocks <= gpus[j].getBlocksNum()) { // if it fits, we stop searching
                 fitsSomewhere = true;
                 break;
             }
         }
 
-        if (fitsSomewhere) {
+        if (fitsSomewhere) { // if there is a valid GPU (the request fits in it), we send the request to waiting
             waitingRequests.push_back(req);
-            for (size_t i = 0; i < nonSubmittedRequests.size(); i++) {
-                cout << "rejected " << req->getId() << " cycle=" << currentCycle << endl;
-                delete req;
-            }
+        }
+        else { // otherwise, there is not GPU that the request fits in, so we reject and delete the request
+            cout << "rejected " << req->getId() << " cycle=" << currentCycle << endl;
+            delete req;
         }
     }
     nonSubmittedRequests = stillPending;
+}
+void Server::admitRequests() {
+    if (waitingRequests.empty() || policy == nullptr) return;
+
+    vector<const Request*> eligible(waitingRequests.begin(), waitingRequests.end());
+    vector<int> order = policy->choose(eligible,gpus);
+
+    vector<bool> admitted(waitingRequests.size(), false);
+    for (size_t i = 0; i < order.size(); i++) {
+        int index = order[i];
+        if (tryAdmit(waitingRequests[index])) {
+            admitted[index] = true;
+        }
+    }
+
+    vector<Request*> stillWaiting;
+    for (size_t i = 0; i < waitingRequests.size(); i++) {
+        if (!admitted[i]) stillWaiting.push_back(waitingRequests[i]);
+    }
+    waitingRequests = stillWaiting;
+}
+bool Server::tryAdmit(Request* req) {
+    int bestGpu = -1;
+    size_t bestCached = 0;
+    size_t bestNeed = 0;
+
+    for (size_t g = 0; g < gpus.size(); g++) {
+        PrefixMatch match = req->getCachedPrefix(gpus[g]);
+        size_t cached = match.blockIds.size();
+
+        size_t idleCached = 0;
+        for (size_t i = 0; i < match.blockIds.size(); i++) {
+            if (gpus[g].isIdle(match.blockIds[i])) idleCached++;
+        }
+
+        size_t need = gpus[g].getBlocksForMemory(req->getNeededMemory(gpus[g])) + idleCached;
+        if (need > gpus[g].availableSlots()) continue;
+
+        if (bestGpu == -1 || cached > bestCached || (cached == bestCached && need < bestNeed)) {
+            bestGpu = static_cast<int>(g);
+            bestCached = cached;
+            bestNeed = need;
+        }
+    }
+    if (bestGpu == -1) return false;
+
+
+    size_t bestMatchLen = req->getCachedPrefix(gpus[bestGpu]).matchedTokens;
+    int sourceGpu = -1;
+    PrefixMatch sourceMatch;
+    for (size_t g = 0; g < gpus.size(); g++) {
+        if (static_cast<int>(g) == bestGpu) continue;
+        
+        PrefixMatch m = req->getCachedPrefix(gpus[g]);
+        if (m.matchedTokens > bestMatchLen) {
+            bestMatchLen = m.matchedTokens;
+            sourceGpu = static_cast<int>(g);
+            sourceMatch = m;
+        }
+    }
+    if (sourceGpu == -1) {
+        gpus[bestGpu].copyMemoryFromOtherGPU(gpus[sourceGpu], sourceMatch.blockIds);
+    }
+
+    req->reserveMemory(gpus[bestGpu]);
+    activeRequests.push_back(req);
+    activeGpu.push_back(bestGpu);
+    return true;
+}
+void Server::actRequests() {
+    vector<Request*> stillActive;
+    vector<int> stillActiveGpu;
+
+    for (size_t i = 0; i < activeRequests.size(); i++) {
+        Request* req = activeRequests[i];
+        int g = activeGpu[i];
+
+        if (!req->finished()) req->act(gpus[g]);
+
+        if (req->finished()) {
+            req->deallocateMemory(gpus[g]);
+            cout << "finished " << req->getId() << " cycle=" << currentCycle << " gpu=" << g << ": " << req->getOutput() << endl;
+            delete req;
+        }
+        else {
+            stillActive.push_back(req);
+            stillActiveGpu.push_back(g);
+        }
+    }
+    activeRequests = stillActive;
+    activeGpu = stillActiveGpu;
 }

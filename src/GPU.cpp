@@ -104,7 +104,6 @@ void GPU::reserve(size_t n, const Request& request) {
     reqBlocks += n;
     totalReserved += n;
 }
-
 void GPU::unreserve(size_t n, const Request& request) {
     if (n == 0) {
         return;
@@ -147,7 +146,6 @@ void GPU::acquireCached(size_t slot) {
 int GPU::readFromBlock(size_t blockId, size_t offset) const {
     return memory[blockId] -> readFromBlock(offset);
 }
-
 void GPU::writeToBlock(std::size_t blockId, std::size_t offset, int value) {
     if (blockId >= blocksNum || memory[blockId] == nullptr) {
         return;
@@ -286,9 +284,13 @@ size_t GPU::findSlotForNewBlock(const vector<size_t>& slots) {
     return blocksNum;
 }
 
+bool GPU::isIdle(size_t slot) const {
+    return memory[slot] != nullptr && memory[slot]->getRefCount() == 0;
+}
 
 // ----------- Getters : START -------------
 int GPU::getCacheHits() const { return cacheHits; }
 int GPU::getEvictions() const { return evictions; }
 size_t GPU::getBlockSize() const { return blockSize; }
+size_t GPU::getBlocksNum() const { return blocksNum; }
 // ----------- Getters : END -------------

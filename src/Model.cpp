@@ -53,21 +53,22 @@ size_t offset) const {
         gpu.writeToBlock(slot, offset + i, static_cast<int>(value % 2001ULL) - 1000);
     }
 }
+
 vector<string> Model::tokenizer(string text) const {
-    vector<string> tokens;
-    string current;
+    vector<string> tokens; // contains the tokens
+    string current; // contains the current token
 
     for (size_t i = 0; i < text.size(); ++i) {
         char c = text[i];
-        if (c == ' ') {
+        if (c == ' ') { // we got to an end of the current token, so add him to the list
             if (!current.empty()) tokens.push_back(current);
             current.clear();
         }
-        else if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')) {
-            current += c;
+        else if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')) { // verify the char is a valid char for a token
+            current += c; 
         }
     }
-    if (!current.empty()) tokens.push_back(current);
+    if (!current.empty()) tokens.push_back(current); // if we have 'left-overs', add them
     return tokens;
 }
 

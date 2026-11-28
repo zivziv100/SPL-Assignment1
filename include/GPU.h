@@ -47,6 +47,8 @@ public:
     std::size_t getBlockSize() const; // Added Getter for blockSize for Requests
     int getCacheHits() const;
     int getEvictions() const;
+    std::size_t getBlocksNum() const;
+    bool isIdle(std::size_t slot) const;
     void acquireCached(std::size_t slot);
 
 private:
