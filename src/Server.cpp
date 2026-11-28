@@ -338,7 +338,7 @@ void Server::serve() {
     }
 
     cout << "summary: cycles=" << currentCycle
-         << " cache hits=" << totalHits
+         << " cache_hits=" << totalHits
          << " evictions=" << totalEvictions << endl;
 }
 bool Server::step() {
@@ -354,7 +354,7 @@ bool Server::step() {
 }
 
 // -------- step() helper functions -------
-bool Server::arriveRequests() {
+void Server::arriveRequests() {
     vector<Request*> stillPending;
     for (size_t i = 0; i < nonSubmittedRequests.size(); i++) {
         Request* req = nonSubmittedRequests[i];

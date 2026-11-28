@@ -53,7 +53,7 @@ private:
     int currentCycle;
     std::vector<int> activeGpu;
 
-    bool arriveRequests();
+    void arriveRequests();
     void admitRequests();
     bool tryAdmit(Request* req);
     void actRequests();
